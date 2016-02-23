@@ -286,3 +286,11 @@ geojson$features <- lapply(geojson$features, function(feat) {
 
 # Add the now-styled GeoJSON object to the map
 leaflet() %>% addGeoJSON(geojson)
+
+# Resulting map has styling but no apparent pop-ups or labels. Would have to
+# search for ways to embed/display that within the geojson format.
+
+
+### Raster Images --------------------------------------------------------------
+
+### Using Leaflet with Shiny ---------------------------------------------------
