@@ -1,23 +1,26 @@
 ---
 title: "Demo of Leaflet in R"
 author: "Nick Mader"
-date: "July 5, 2016"
+date: "July 11, 2016"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, fig.width = 5, fig.height = 3)
+knitr::opts_chunk$set(echo = TRUE, fig.width = 5, fig.height = 3) # root.dir = "~/GitHub/leaflet-trainr/" ... currently not sure how to reliably get Knitr to respect this identification of root.directory. See https://github.com/yihui/knitr/issues/277
 library(leaflet)
 library(rgdal)
 library(readxl)
 library(RColorBrewer)
-#try(setwd("~/GitHub/leaflet-trainr/"), silent = T)
+library(shiny)
+library(foreign)
 ```
 
 <!-- Note to self, here are some nice references:
 * for using knitr and RMarkdown -- http://kbroman.org/knitr_knutshell/pages/figs_tables.html 
 * the RMarkdown cheat sheet -- https://www.rstudio.com/wp-content/uploads/2016/03/rmarkdown-cheatsheet-2.0.pdf
-* info on Knitr options -- http://yihui.name/knitr/options/ -->
+* info on Knitr options -- http://yihui.name/knitr/options/
+* RStudio's R Leaflet tutorial -- https://rstudio.github.io/leaflet/
+-->
 
 This document is intended to give a demonstration--though not full tutorial or demo of features--of how Leaflet can be used in R to easily generate attractive, content-rich, interactive maps.
 
@@ -137,10 +140,13 @@ library(rgdal)
 # which already has ACS data merged in, and transform it into local coordinate reference system.
 # (Note: The "acs" package allows for downloading and working with ACS data
 # directly in R. We don't use that here for the sake of space.)
-chiTracts <- readOGR(dsn = paste0(getwd(), "../data"), layer = "CensusTracts_acsMerge", encoding = "UTF-8")
+#tractData <- read.dbf("../data/CensusTracts_acsMerge.dbf")
+chiTracts <- readOGR(dsn = "../data/CensusTracts_acsMerge.shp",
+                     layer = "CensusTracts_acsMerge",
+                     encoding = "UTF-8")
 chiTracts <- spTransform(chiTracts, CRS("+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs"))
 
-# Prepare colors for symbolizing our polygon, and add it to the map
+#Prepare colors for symbolizing our polygon, and add it to the map
 quantpal_bl <- colorQuantile(palette = "Blues", domain = NULL, n = 5)
 map_wPolys <- leaflet(sch_merge) %>%
   addProviderTiles("CartoDB.Positron") %>%
@@ -155,8 +161,7 @@ map_wPolys
 ```
 
 ## Displaying Layers
-<!-- Create groupings of layers and legend. Mutually exclusive for base layers
-and multiple selections for school types to show -->
+
 ```{r}
 quantpal_gr <- colorQuantile(palette = "Greens", domain = NULL, n = 5)
 map_wLayers <- leaflet(sch_merge) %>%
@@ -172,10 +177,6 @@ map_wLayers <- leaflet(sch_merge) %>%
               fillColor = ~quantpal_gr(chiTracts$rNonWhite),
               color = "#BDBDC3", weight = 0.5, fillOpacity = 0.8,
               group = "% Non-White") %>%
-  addLegend(position = "bottomright", pal = quantpal_bl, values = ~chiTracts$rEd_LtHS,
-                title = "Less than HS Education") %>%
-  addLegend(position = "bottomright", pal = quantpal_gr, values = ~chiTracts$rNonWhite,
-                title = "Proportion Non-White") %>%
   addLayersControl(
     baseGroups = c("% Ed < HS", "% Non-White"),
     overlayGroups = c("Schools"),
@@ -189,6 +190,31 @@ map_wLayers
 <!-- Making a Shiny app to increase the interactivity of other features, e.g.
 text field to jump to locations, or set ranges of schools based on slider of
 characteristics -->
+```{r}
+r_colors <- rgb(t(col2rgb(colors()) / 255))
+names(r_colors) <- colors()
 
+ui <- fluidPage(
+  leafletOutput("mymap"),
+  p(),
+  actionButton("recalc", "New points")
+)
 
+server <- function(input, output, session) {
 
+  points <- eventReactive(input$recalc, {
+    cbind(rnorm(40) * 2 + 13, rnorm(40) + 48)
+  }, ignoreNULL = FALSE)
+
+  output$mymap <- renderLeaflet({
+    leaflet() %>%
+      addProviderTiles("Stamen.TonerLite",
+        options = providerTileOptions(noWrap = TRUE)
+      ) %>%
+      addMarkers(data = points())
+  })
+}
+
+shinyApp(ui, server)
+
+```
