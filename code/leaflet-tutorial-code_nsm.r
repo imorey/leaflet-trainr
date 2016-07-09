@@ -1,6 +1,7 @@
 # This script is Nick's own work following along with the leaflet for R
 # tutorial created by RStudio: https://rstudio.github.io/leaflet/
 
+install.packages("leaflet")
 library(leaflet)
 try(setwd("~/GitHub/leaflet-trainr/"))
 
