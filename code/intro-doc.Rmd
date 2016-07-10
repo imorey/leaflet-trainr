@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, fig.width = 5, fig.height = 3) # root.dir = "~/GitHub/leaflet-trainr/" ... currently not sure how to reliably get Knitr to respect this identification of root.directory. See https://github.com/yihui/knitr/issues/277
+knitr::opts_chunk$set(echo = TRUE, fig.width = 5, fig.height = 3, warning = FALSE, message = FALSE, error = FALSE) # root.dir = "~/GitHub/leaflet-trainr/" ... currently not sure how to reliably get Knitr to respect this identification of root.directory. See https://github.com/yihui/knitr/issues/277
 library(leaflet)
 library(rgdal)
 library(readxl)
@@ -33,7 +33,7 @@ While I have strived to create a helpful sequence for learning about Leaflet's f
 Creating an interactive map with colors, markers, zoom, etc is as easy as just a
 few lines of code.
 
-```{r first map}
+```{r first_map}
 m <- leaflet() %>%
        addTiles() %>%  # Add default OpenStreetMap map tiles
        addMarkers(lng=-87.5947675, lat=41.7858686, popup="Chapin Hall")
@@ -44,7 +44,7 @@ m
 By default, Leaflet in `R` uses map tiles from Open Street Maps. However, it can
 easily access and use map tiles from other sources and styles.
 
-```{r}
+```{r first_map_newBase}
 m %>% addProviderTiles("CartoDB.Positron")
 ``` 
 
@@ -52,7 +52,7 @@ m %>% addProviderTiles("CartoDB.Positron")
 It is easy to display data that has geographic components. The code below
 sources data on CPS school High School report cards from the [City of Chicago Data Portal](https://data.cityofchicago.org/).
 
-```{r}
+```{r map_schools}
 # Download and prep CPS report card data
 schools <- read.csv("https://data.cityofchicago.org/api/views/2m8w-izji/rows.csv",
                     stringsAsFactors = FALSE) %>%
@@ -83,13 +83,12 @@ leaflet(sch_merge) %>% addTiles() %>%
 # palette <- brewer.pal(n = length(levels(sch_merge$PolicyLevel)),
 #                       name = "Set1")
 -->
-```{r}
+```{r map_symbology}
 # Picking out a color palette
 palette <- colorFactor(palette = "Set1",
-                        domain = sch_merge$PolicyLevel)
+                       domain = sch_merge$PolicyLevel)
 
-# Changing our display from markers to circles, and adding the formatting
-# information we want, about color, radius, outline, and opacity
+# Changing our display from markers to circles, and adding the formatting information we want, about color, radius, outline, and opacity
 sch_map_withFormats <- leaflet(sch_merge) %>% addProviderTiles("CartoDB.Positron") %>%
   addCircles(lng = ~Longitude, lat = ~Latitude, popup = ~Name.of.School,
              color = ~palette(PolicyLevel), radius = ~Totals/3, stroke = FALSE,
@@ -99,20 +98,19 @@ sch_map_withFormats
 
 ## Formatting Display
 Adding a legend:
-```{r}
-# Using the map that we just created, but adding a legend, giving it the information
-# on colors, values, and title that we want.
+```{r map_legend}
+# Using the map that we just created, but adding a legend, giving it the information on colors, values, and title that we want.
 sch_map_addedLegend <- 
   sch_map_withFormats %>%
     addLegend(position = "bottomright", pal = palette, values = ~PolicyLevel,
-                title = "CPS School Policy Levels")
+              title = "CPS School Policy Levels")
 sch_map_addedLegend
 ```
 
 ## Generating Informative Pop-Ups
 We can create informative pop-ups using any of the information in out data sets,
 using basic HTML to create formats and web links.
-```{r}
+```{r map_detailedPopup}
 detailedPopUp <- with(sch_merge, paste(sep = "<br/>",
                                        paste0("<b>", Name.of.School, "</b> (<a href='", Website,"'>web</a>)"),
                                        paste0(Street.Address, " ", City, ", ", State, " " , ZIP.Code),
@@ -131,23 +129,22 @@ Just as we can add points, we can also work with polygons. Here, we use R to
 read a shape file and merge in ACS data that we will use to create data
 symbolization. 
 
-```{r}
+```{r map_polygonSymbology}
 # First, we load the rgdal package--the R Geo-spatial Data Abstraction Library--
 # which will allow us to do a variety of GIS data manipulations
 library(rgdal) 
 
-# Next, we load in a shape file representing all of the Census tracts in Cook County
-# which already has ACS data merged in, and transform it into local coordinate reference system.
-# (Note: The "acs" package allows for downloading and working with ACS data
-# directly in R. We don't use that here for the sake of space.)
-#tractData <- read.dbf("../data/CensusTracts_acsMerge.dbf")
+# Next, we load in a shape file representing all of the Census tracts in Cook County which already has ACS data merged in, and transform it into local coordinate reference system.
+# (Note: The "acs" package allows for downloading and working with ACS data directly in R. We don't use that here for the sake of space.)
 chiTracts <- readOGR(dsn = "../data/CensusTracts_acsMerge.shp",
                      layer = "CensusTracts_acsMerge",
-                     encoding = "UTF-8")
+                     encoding = "UTF-8",
+                     verbose = FALSE)
 chiTracts <- spTransform(chiTracts, CRS("+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs"))
 
 #Prepare colors for symbolizing our polygon, and add it to the map
 quantpal_bl <- colorQuantile(palette = "Blues", domain = NULL, n = 5)
+
 map_wPolys <- leaflet(sch_merge) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addPolygons(data = chiTracts,
@@ -162,7 +159,7 @@ map_wPolys
 
 ## Displaying Layers
 
-```{r}
+```{r map_layerSelection}
 quantpal_gr <- colorQuantile(palette = "Greens", domain = NULL, n = 5)
 map_wLayers <- leaflet(sch_merge) %>%
   addProviderTiles("CartoDB.Positron") %>%
@@ -185,36 +182,3 @@ map_wLayers
 ```
 
 
-
-## Using Shiny for Simple Web Applications
-<!-- Making a Shiny app to increase the interactivity of other features, e.g.
-text field to jump to locations, or set ranges of schools based on slider of
-characteristics -->
-```{r}
-r_colors <- rgb(t(col2rgb(colors()) / 255))
-names(r_colors) <- colors()
-
-ui <- fluidPage(
-  leafletOutput("mymap"),
-  p(),
-  actionButton("recalc", "New points")
-)
-
-server <- function(input, output, session) {
-
-  points <- eventReactive(input$recalc, {
-    cbind(rnorm(40) * 2 + 13, rnorm(40) + 48)
-  }, ignoreNULL = FALSE)
-
-  output$mymap <- renderLeaflet({
-    leaflet() %>%
-      addProviderTiles("Stamen.TonerLite",
-        options = providerTileOptions(noWrap = TRUE)
-      ) %>%
-      addMarkers(data = points())
-  })
-}
-
-shinyApp(ui, server)
-
-```
