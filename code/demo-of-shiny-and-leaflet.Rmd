@@ -38,11 +38,13 @@ sch_merge <- merge(x = schools,
 
 This interactive page is made interactive using R Markdown to generate the page, the Leaflet package in R, and the Shiny package in R for the user controls. Unlike the more traditional workflow of creating static reports, these tools allow us to create documents that allow our audience to interact with features, assumptions, and context that is most relevant to them, and see the results immediately. 
 
+## School Level and 5Essentials Explorer
+
 ```{r app, echo=FALSE, fig.width = 7, fig.height = 12}
 
 levelValues <- sort(unique(sch_merge$CPS.Performance.Policy.Level))
 ui <- shinyUI(fluidPage(
-  titlePanel("School Level and 5Essentials Explorer"),
+  #titlePanel("School Level and 5Essentials Explorer"),
   sidebarLayout(
     sidebarPanel(
       checkboxGroupInput(inputId = "myLevels",
@@ -50,9 +52,9 @@ ui <- shinyUI(fluidPage(
                          choices = levelValues,
                          select  = levelValues),
       selectInput(inputId = "symbolizeField",
-                  label = "Choose 5Essentials Rating to Visualie:",
+                  label = "Choose 5Essentials Rating to Visualize:",
                   choices = c("Effective Leaders", "Collaborative Teachers", "Supportive Environment", 
-                              "Involved Family", "Ambitious Instruction"), # "Safe", "School Community", "Parent Teacher Partnership", "Quality of Facilities"
+                              "Involved Family", "Ambitious Instruction"),
                   selected = "Involved Family"),
       sliderInput(inputId = "minResponse",
                   label = "Minimum Response Rate:",
@@ -76,16 +78,26 @@ server <- function(input, output){
   myPalette <- colorFactor(palette = "Blues",
                            domain = essentialsLabels, 
                            ordered = TRUE)
+  myPopup <- with(sch_merge, paste(sep = "<br/>",
+                                   paste0("<b>", Name.of.School, "</b> (<a href='", Website,"'>web</a>)"),
+                                   paste0(Street.Address, " ", City, ", ", State, " " , ZIP.Code),
+                                   paste0("Network: ", Network),
+                                   paste0("Policy Level: ", PolicyLevel),
+                                   "",
+                                   paste0("Effective Leaders Rating: ",      Effective.Leaders),
+                                   paste0("Collaborative Teachers Rating: ", Collaborative.Teachers),
+                                   paste0("Supportive Environment Rating: ", Supportive.Environment),
+                                   paste0("Involved Family: ",               Involved.Family),
+                                   paste0("Ambitious Instruction: ",         Ambitious.Instruction)))
 
   output$schMap <- renderLeaflet({
     leaflet(mySchs()) %>%
       addProviderTiles("CartoDB.Positron") %>%
-      addCircles(lng = ~Longitude, lat = ~Latitude, popup = ~Name.of.School,
+      addCircles(lng = ~Longitude, lat = ~Latitude, popup = ~myPopup,
                  color = ~myPalette(symbField()), radius = ~Totals/3, stroke = FALSE,
                  opacity = 0.8, fillOpacity = 0.8) %>%
       addLegend(position = "bottomright", pal = myPalette, values = ~symbField(),
                 title = input$symbolizeField)
-
   })
 }
 
