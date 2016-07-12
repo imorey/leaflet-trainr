@@ -1,0 +1,9 @@
+name: demo-of-shiny-and-leaflet
+account: nsmader
+server: shinyapps.io
+appId: 113812
+bundleId: 502258
+url: https://nsmader.shinyapps.io/demo-of-shiny-and-leaflet/
+when: 1468289236.24574
+asMultiple: FALSE
+asStatic: FALSE
