@@ -1,7 +1,0 @@
-name: Publish Document
-account: rpubs
-server: rpubs.com
-appId: https://api.rpubs.com/api/v1/document/194021/ec348372c5b740bebd9d4aad8298de07
-bundleId: https://api.rpubs.com/api/v1/document/194021/ec348372c5b740bebd9d4aad8298de07
-url: http://rpubs.com/nmader/194021
-when: 1467748453.45072
